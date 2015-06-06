@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TimerTask;
 import javax.jws.WebService;
@@ -81,7 +82,8 @@ public class RouletteService {
             }
         if(!playerFound)
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
-        events.stream().filter((currentEvent) -> (currentEvent.getGame() == game)).forEach((currentEvent) -> {
+        List<engine.Event> targetEvents = events.subList(eventId, events.size()-1);
+        targetEvents.stream().filter((currentEvent) -> (currentEvent.getGame() == game)).forEach((currentEvent) -> {
             results.add(convertEventToWSEvent(currentEvent));
         });
         
