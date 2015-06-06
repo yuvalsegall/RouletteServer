@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="roulette">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="players" type="players">
+                    <xs:unique name="unique-player-name">
+                        <xs:selector xpath="player"/>
+                        <xs:field xpath="@name"/>
+                    </xs:unique>
+                </xs:element>
+            </xs:sequence>
+            <xs:attribute name="name" type="xs:string" use="required"/>
+            <xs:attribute name="table_type" type="tableType" use="required"/>
+            <xs:attribute name="min_bets_per_player" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:nonNegativeInteger">
+                        <xs:minInclusive value="0"/>
+                        <xs:maxInclusive value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="max_bets_per_player" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:nonNegativeInteger">
+                        <xs:minInclusive value="1"/>
+                        <xs:maxInclusive value="10"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="init_sum_of_money" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:nonNegativeInteger">
+                        <xs:minInclusive value="10"/>
+                        <xs:maxInclusive value="100"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="players">
+        <xs:sequence minOccurs="1" maxOccurs="6">
+            <xs:element name="player">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="bets" type="bets"/>
+                    </xs:sequence>
+                    <xs:attributeGroup ref="player"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:attributeGroup name="player">
+        <xs:attribute name="type" type="playerType" use="required"/>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="money" type="xs:nonNegativeInteger" use="required"/>
+    </xs:attributeGroup>
+
+    <xs:simpleType name="playerType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="HUMAN"/>
+            <xs:enumeration value="COMPUTER"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="tableType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="AMERICAN"/>
+            <xs:enumeration value="FRENCH"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="betType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="STRAIGHT"/>
+            <xs:enumeration value="SPLIT"/>
+            <xs:enumeration value="STREET"/>
+            <xs:enumeration value="SIX_LINE"/>
+            <xs:enumeration value="TRIO"/>
+            <xs:enumeration value="TOP_LINE"/>
+            <xs:enumeration value="MANQUE"/>
+            <xs:enumeration value="PASSE"/>
+            <xs:enumeration value="ROUGE"/>
+            <xs:enumeration value="NOIR"/>
+            <xs:enumeration value="PAIR"/>
+            <xs:enumeration value="IMPAIR"/>
+            <xs:enumeration value="PREMIERE_DOUZAINE"/>
+            <xs:enumeration value="MOYENNE_DOUZAINE"/>
+            <xs:enumeration value="DERNIERE_DOUZAINE"/>
+            <xs:enumeration value="CORNER"/>
+			<xs:enumeration value="BASKET"/>
+			<xs:enumeration value="COLUMN1"/>
+            <xs:enumeration value="COLUMN2"/>
+            <xs:enumeration value="COLUMN3"/>
+            <xs:enumeration value="SNAKE"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="bet">
+        <xs:sequence minOccurs="0" maxOccurs="6">
+            <xs:element name="number">
+                <xs:simpleType>
+                    <xs:restriction base="xs:integer">
+                        <xs:minInclusive value="-1"/>
+                        <xs:maxInclusive value="37"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="type" use="required" type="betType"></xs:attribute>
+        <xs:attribute name="amount" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:positiveInteger">
+                    <xs:minInclusive value="1"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="bets">
+        <xs:sequence minOccurs="0" maxOccurs="10">
+            <xs:element name="bet" type="bet"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>
