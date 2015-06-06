@@ -76,9 +76,9 @@ public class RouletteService {
         if(eventId < 0 || eventId > engine.Event.eventCounter)
             throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, null);
         List<engine.Event> targetEvents = events.subList(eventId, events.size()-1);
-        targetEvents.stream().filter((currentEvent) -> (currentEvent.getGame() == game)).forEach((currentEvent) -> {
-            results.add(convertEventToWSEvent(currentEvent));
-        });
+        for(engine.Event event : targetEvents)
+            if(event.getGame() == game)
+                results.add(convertEventToWSEvent(event));
 
         return results;
     }
