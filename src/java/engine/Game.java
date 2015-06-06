@@ -93,6 +93,7 @@ public class Game {
         private int computerPlayers;
         private int humanPlayers;
         private GameStatus gameStatus;
+        private boolean isGameFromXML = false;
         
         public GameDetails(String gameName, int computerPlayers, int humanPlayers, int minWages, int maxWages, TableType tableType, int initialSumOfMoney, GameStatus gameStatus) {
             this.gameName = gameName;
@@ -143,6 +144,14 @@ public class Game {
             return gameStatus;
         }
 
+        public boolean isIsGameFromXML() {
+            return isGameFromXML;
+        }
+
+        public void setIsGameFromXML(boolean isGameFromXML) {
+            this.isGameFromXML = isGameFromXML;
+        }
+        
         public void setGameStatus(GameStatus gameStatus) {
             this.gameStatus = gameStatus;
         }

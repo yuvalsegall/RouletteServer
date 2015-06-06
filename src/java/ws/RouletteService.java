@@ -215,6 +215,7 @@ public class RouletteService {
         
         if(findGame(game.getGameDetails().getGameName()) != null)
             throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES ,null);
+        game.getGameDetails().setIsGameFromXML(true);
         games.add(game);
         
         return game.getGameDetails().getGameName();
