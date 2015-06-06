@@ -348,9 +348,11 @@ public class RouletteService {
         Event wsEvent = new Event();
         
         wsEvent.setAmount(event.getAmount());
-        wsEvent.setBetType(convertBetTypeToWs(event.getBetType()));
+        if(event.getBetType() != null)
+            wsEvent.setBetType(convertBetTypeToWs(event.getBetType()));
         wsEvent.setId(event.getEventID());
-        wsEvent.setPlayerName(event.getPlayerName());
+        if(event.getPlayerName() != null)
+            wsEvent.setPlayerName(event.getPlayerName());
         wsEvent.setTimeout(event.getTimeoutCount());
         wsEvent.setType(convertEventTypeToWs(event.getEventType()));
         wsEvent.setWinningNumber(event.getWinningNumber());
