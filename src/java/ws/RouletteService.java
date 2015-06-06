@@ -67,7 +67,6 @@ public class RouletteService {
     private static final int MAX_INITIAL_SUM_OF_MONEY = 100;
     
     public java.util.List<ws.roulette.Event> getEvents(int eventId, int playerId) throws ws.roulette.InvalidParameters_Exception {
-        System.out.println("got getEvents");
         List<ws.roulette.Event> results = new ArrayList<>();
         Player player = findPlayer(playerId);
         engine.Game game = findGameByPlayer(player);
@@ -76,12 +75,10 @@ public class RouletteService {
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
         if(eventId < 0 || eventId > engine.Event.eventCounter)
             throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, null);
-
         List<engine.Event> targetEvents = events.subList(eventId, events.size()-1);
-
         targetEvents.stream().filter((currentEvent) -> (currentEvent.getGame() == game)).forEach((currentEvent) -> {
-                results.add(convertEventToWSEvent(currentEvent));
-            });
+            results.add(convertEventToWSEvent(currentEvent));
+        });
 
         return results;
     }
