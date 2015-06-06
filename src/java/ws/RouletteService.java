@@ -106,7 +106,6 @@ public class RouletteService {
     }
 
     public ws.roulette.GameDetails getGameDetails(java.lang.String gameName) throws ws.roulette.GameDoesNotExists_Exception {
-        //TODO catch exception
         ws.roulette.GameDetails result;
         Game.GameDetails gameDetails = getGameDetailsByName(gameName);
         
@@ -145,7 +144,7 @@ public class RouletteService {
         game.getGameDetails().addPlayer(newPlayer);
         
         if(gameReadyToStart(game)){
-            initRound(game);
+            initFirstRound(game);
             events.add(new engine.Event(engine.Event.EventType.GAME_START, game));
         }
         
@@ -487,7 +486,7 @@ case STREET:
         return false;
     }
 
-    private void initRound(Game game) {
+    private void initFirstRound(Game game) {
         game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
         playComputerMoves(game);
     }
