@@ -163,7 +163,6 @@ public class RouletteService {
     }
 
     public void makeBet(int betMoney, ws.roulette.BetType betType, java.util.List<java.lang.Integer> numbers, int playerId) throws ws.roulette.InvalidParameters_Exception {
-        //TODO: keep bets and create end round + payment method
         engine.Player player = findPlayer(playerId);
         engine.Game game = findGameByPlayer(player);
         int[] nums;
