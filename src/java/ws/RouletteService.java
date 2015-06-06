@@ -15,11 +15,12 @@ import engine.Player;
 import engine.Table;
 import engine.XMLGame;
 import engine.bets.Bet;
+import engine.bets.ColorBet;
+import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.TimerTask;
 import javax.jws.WebService;
@@ -65,6 +66,7 @@ public class RouletteService {
     private static final int MAX_INITIAL_SUM_OF_MONEY = 100;
     
     public java.util.List<ws.roulette.Event> getEvents(int eventId, int playerId) throws ws.roulette.InvalidParameters_Exception {
+        System.out.println("got getEvents");
         boolean playerFound = false;
         List<ws.roulette.Event> results = new ArrayList<>();
         
@@ -487,6 +489,7 @@ case STREET:
 
     private void initRound(Game game) {
         game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
+        playComputerMoves(game);
     }
 
     private void checkIfEndRoundBeforeTime(Game game) {
@@ -512,6 +515,12 @@ case STREET:
             res[i++] = current.intValue();
         
         return res;
+    }
+
+    private void playComputerMoves(Game game) {
+        game.getGameDetails().getPlayers().stream().filter((player) -> (!player.getPlayerDetails().getIsHuman())).filter((player) -> (player.getPlayerDetails().getAmount().intValue() > 0)).forEach((player) -> {
+            player.getPlayerDetails().getBets().add(new ColorBet(BigInteger.ONE, Bet.BetType.NOIR, Color.black));
+        });
     }
     
     public class endRound extends TimerTask{
@@ -543,10 +552,11 @@ case STREET:
                 player.getPlayerDetails().setBets(null);
                 player.getPlayerDetails().setPlayerAction(null);
             });
+            events.add(event);
             if (!isAnybodyLeft(game)) {
                 events.add(new engine.Event(engine.Event.EventType.GAME_OVER, game));
             }
-            events.add(event);
+            game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
         }
     }
     private void spinRoulette(engine.Game game) {

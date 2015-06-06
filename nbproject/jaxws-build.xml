@@ -28,7 +28,7 @@
     </target>
     <target name="wsimport-service-RouletteService" depends="wsimport-init">
         <mkdir dir="${build.generated.dir}/jax-wsCache/service/RouletteService"/>
-        <wsimport sourcedestdir="${build.generated.dir}/jax-wsCache/service/RouletteService" destdir="${build.generated.dir}/jax-wsCache/service/RouletteService" wsdl="${basedir}/${conf-dir}xml-resources/web-services/RouletteService/wsdl/RouletteWebServiceService.wsdl" catalog="catalog.xml" encoding="${source.encoding}" extension="true" verbose="true" fork="false" xnocompile="true" xendorsed="true">
+        <wsimport sourcedestdir="${build.generated.dir}/jax-wsCache/service/RouletteService" destdir="${build.generated.dir}/jax-wsCache/service/RouletteService" wsdl="${basedir}/${conf-dir}xml-resources/web-services/RouletteService/wsdl/RouletteWebServiceService.wsdl" catalog="catalog.xml" extension="true" verbose="true" fork="false" xnocompile="true" xendorsed="true">
             <depends file="${basedir}/${conf-dir}xml-resources/web-services/RouletteService/wsdl/RouletteWebServiceService.wsdl"/>
             <produces dir="${build.generated.dir}/jax-wsCache/service/RouletteService"/>
         </wsimport>
