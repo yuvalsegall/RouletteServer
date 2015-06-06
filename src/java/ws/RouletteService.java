@@ -68,25 +68,21 @@ public class RouletteService {
     
     public java.util.List<ws.roulette.Event> getEvents(int eventId, int playerId) throws ws.roulette.InvalidParameters_Exception {
         System.out.println("got getEvents");
-        boolean playerFound = false;
         List<ws.roulette.Event> results = new ArrayList<>();
-        
+        Player player = findPlayer(playerId);
+        engine.Game game = findGameByPlayer(player);
+                
+        if(game == null)
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
         if(eventId < 0 || eventId > engine.Event.eventCounter)
             throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, null);
-        engine.Event event = findEventById(eventId);
-        engine.Game game = event.getGame();
-        for(engine.Player player : game.getGameDetails().getPlayers())
-            if(player.getPlayerDetails().getPlayerID() == playerId){
-                playerFound = true;
-                break;
-            }
-        if(!playerFound)
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+
         List<engine.Event> targetEvents = events.subList(eventId, events.size()-1);
+
         targetEvents.stream().filter((currentEvent) -> (currentEvent.getGame() == game)).forEach((currentEvent) -> {
-            results.add(convertEventToWSEvent(currentEvent));
-        });
-        
+                results.add(convertEventToWSEvent(currentEvent));
+            });
+
         return results;
     }
 
