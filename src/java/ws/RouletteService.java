@@ -333,8 +333,8 @@ public class RouletteService {
         result.setHumanPlayers(gameDetails.getHumanPlayers());
         result.setInitalSumOfMoney(gameDetails.getInitialSumOfMoney());
         result.setIntMaxWages(gameDetails.getMaxWages());
-        //result.setJoinedHumanPlayers(); //TODO:table full? table active?
-        //result.setLoadedFromXML(); //TODO: good question
+        result.setJoinedHumanPlayers(getCountOfHumans(gameDetails)); //TODO:table full? table active?
+        result.setLoadedFromXML(gameDetails.isIsGameFromXML());
         result.setMinWages(gameDetails.getMinWages());
         result.setName(gameDetails.getGameName());
         result.setRouletteType(gameDetails.getTableType() == Table.TableType.FRENCH ? ws.roulette.RouletteType.FRENCH : ws.roulette.RouletteType.AMERICAN);
@@ -563,6 +563,15 @@ case STREET:
             Player newPlayer = new Player(pd);
             game.getGameDetails().getPlayers().add(newPlayer);
         }
+    }
+
+    private int getCountOfHumans(Game.GameDetails gameDetails) {
+        int count = 0;
+        for(Player player : gameDetails.getPlayers())
+            if(player.getPlayerDetails().getIsHuman())
+                count++;
+        
+        return count;
     }
     
     public class endRound extends TimerTask{
