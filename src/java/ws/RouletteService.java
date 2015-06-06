@@ -138,12 +138,29 @@ public class RouletteService {
             if(player.getPlayerDetails().getName().equals(playerName))
                 throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
         }
-        //TODO: if game was from XML, check name of player is human or InvalidParameters_Exception
         Player.PlayerDetails pd = new Player.PlayerDetails(playerName, Boolean.TRUE, BigInteger.valueOf(game.getGameDetails().getInitialSumOfMoney()));
         Player newPlayer = new Player(pd);
-        game.getGameDetails().addPlayer(newPlayer);
+        if(game.getGameDetails().isIsGameFromXML()){
+            Player playerInLoadedGame = GetPlayerFromGame(newPlayer.getPlayerDetails().getName());
+            if(playerInLoadedGame.getPlayerDetails().getIsHuman()){
+                if(playerInLoadedGame.getPlayerDetails().getPlayerID() != 0){
+                    throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
+                }
+                else{
+                    game.getGameDetails().getPlayers().remove(playerInLoadedGame);
+                    game.getGameDetails().getPlayers().add(newPlayer);
+                }
+            }
+            else{
+                throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
+            }
+        }
+        else{
+            game.getGameDetails().addPlayer(newPlayer);
+        }
         
         if(gameReadyToStart(game)){
+            game.getGameDetails().setGameStatus(Game.GameStatus.ACTIVE);
             initFirstRound(game);
             events.add(new engine.Event(engine.Event.EventType.GAME_START, game));
         }
@@ -216,6 +233,7 @@ public class RouletteService {
         if(findGame(game.getGameDetails().getGameName()) != null)
             throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES ,null);
         game.getGameDetails().setIsGameFromXML(true);
+        game.getGameDetails().setGameStatus(Game.GameStatus.WAITING);
         games.add(game);
         
         return game.getGameDetails().getGameName();
@@ -255,7 +273,7 @@ public class RouletteService {
         return null;
     }
 
-    private Game findGame(String gameName) {
+    private engine.Game findGame(String gameName) {
         for(Game game : games){
             if(game.getGameDetails().getGameName().equals(gameName))
                 return game;
@@ -475,13 +493,17 @@ case STREET:
 
     private boolean gameReadyToStart(Game game) {
         int numOfHumans = game.getGameDetails().getHumanPlayers();
-        int counter = 0;
+        int counter = 0;        
         
-        for(engine.Player player : game.getGameDetails().getPlayers())
-            if(player.getPlayerDetails().getIsHuman())
-                counter++;
-        if(counter == numOfHumans)
-            return true;
+        if(game.getGameDetails().isIsGameFromXML()){
+            if (!game.getGameDetails().getPlayers().stream().noneMatch((player) -> (player.getPlayerDetails().getPlayerID() == 0))) {
+                return false;
+            }
+        }else{
+            counter = game.getGameDetails().getPlayers().stream().filter((player) -> (player.getPlayerDetails().getIsHuman())).map((_item) -> 1).reduce(counter, Integer::sum);
+            if(counter == numOfHumans)
+                return true;
+        }
         
         return false;
     }
@@ -520,6 +542,10 @@ case STREET:
         game.getGameDetails().getPlayers().stream().filter((player) -> (!player.getPlayerDetails().getIsHuman())).filter((player) -> (player.getPlayerDetails().getAmount().intValue() > 0)).forEach((player) -> {
             player.getPlayerDetails().getBets().add(new ColorBet(BigInteger.ONE, Bet.BetType.NOIR, Color.black));
         });
+    }
+
+    private Player GetPlayerFromGame(String name) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
     public class endRound extends TimerTask{

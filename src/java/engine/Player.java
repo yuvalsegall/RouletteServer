@@ -13,7 +13,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 public class Player implements Comparable<Player> {
 
     private final PlayerDetails playerDetails;
-    private static int idCounter = 0;
+    private static int idCounter = 999;
 
     public Player(PlayerDetails playerDetials) {
         this.playerDetails = playerDetials;
