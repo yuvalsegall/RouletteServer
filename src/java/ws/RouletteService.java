@@ -101,8 +101,9 @@ public class RouletteService {
                 
         tableType = rouletteType == ws.roulette.RouletteType.AMERICAN ? Table.TableType.AMERICAN : Table.TableType.FRENCH;
         Game.GameDetails gd = new Game.GameDetails(name, computerizedPlayers, humanPlayers, minWages, minWages, tableType, initalSumOfMoney, Game.GameStatus.WAITING);
-        
-        games.add(new Game(gd));
+        Game game = new Game(gd);
+        createComputerPlayers(game);
+        games.add(game);
     }
 
     public ws.roulette.GameDetails getGameDetails(java.lang.String gameName) throws ws.roulette.GameDoesNotExists_Exception {
@@ -141,7 +142,7 @@ public class RouletteService {
         Player.PlayerDetails pd = new Player.PlayerDetails(playerName, Boolean.TRUE, BigInteger.valueOf(game.getGameDetails().getInitialSumOfMoney()));
         Player newPlayer = new Player(pd);
         if(game.getGameDetails().isIsGameFromXML()){
-            Player playerInLoadedGame = GetPlayerFromGame(newPlayer.getPlayerDetails().getName());
+            Player playerInLoadedGame = GetPlayerFromGame(newPlayer.getPlayerDetails().getName(), game);
             if(playerInLoadedGame.getPlayerDetails().getIsHuman()){
                 if(playerInLoadedGame.getPlayerDetails().getPlayerID() != 0){
                     throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
@@ -544,8 +545,22 @@ case STREET:
         });
     }
 
-    private Player GetPlayerFromGame(String name) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private Player GetPlayerFromGame(String name, Game game) {
+        for(Player player : game.getGameDetails().getPlayers())
+            if(player.getPlayerDetails().getName().equals(name))
+                return player;
+        
+        return null;
+    }
+
+    private void createComputerPlayers(Game game) {
+        int computerPlayers = game.getGameDetails().getComputerPlayers();
+        
+        for(int i = 0 ; i < computerPlayers ; i++){
+            engine.Player.PlayerDetails pd = new engine.Player.PlayerDetails("computer" + i, false,BigInteger.valueOf(game.getGameDetails().getInitialSumOfMoney()));
+            Player newPlayer = new Player(pd);
+            game.getGameDetails().getPlayers().add(newPlayer);
+        }
     }
     
     public class endRound extends TimerTask{
