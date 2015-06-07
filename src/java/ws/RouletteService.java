@@ -21,7 +21,6 @@ import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.TimerTask;
 import javax.jws.WebService;
@@ -170,7 +169,9 @@ public class RouletteService {
         result = findPlayer(playerId);
         if(result == null)
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
-        //TODO: cannot throw GameDoesNotExists_Exception if didnt recive game name
+        engine.Game game = findGameByPlayer(result);
+        if(game.getGameDetails().getGameStatus() == engine.Game.GameStatus.FINISHED)
+            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, null);
         
         return convertPlayerDetailsToWsFormat(result.getPlayerDetails());
     }
@@ -543,7 +544,7 @@ case STREET:
         int i=0;
         
         for(Integer current : numbers)
-            res[i++] = current.intValue();
+            res[i++] = current;
         
         return res;
     }
