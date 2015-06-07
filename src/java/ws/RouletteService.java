@@ -339,7 +339,7 @@ public class RouletteService {
         result.setHumanPlayers(gameDetails.getHumanPlayers());
         result.setInitalSumOfMoney(gameDetails.getInitialSumOfMoney());
         result.setIntMaxWages(gameDetails.getMaxWages());
-        result.setJoinedHumanPlayers(getCountOfHumans(gameDetails)); //TODO:table full? table active?
+        result.setJoinedHumanPlayers(getCountOfHumans(gameDetails));
         result.setLoadedFromXML(gameDetails.isIsGameFromXML());
         result.setMinWages(gameDetails.getMinWages());
         result.setName(gameDetails.getGameName());
