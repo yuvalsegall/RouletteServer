@@ -303,15 +303,20 @@ public class RouletteService {
 
         result.setMoney(playerDetails.getAmount().intValue());
         result.setName(playerDetails.getName());
-        if(playerDetails.getIsActive())
-            result.setStatus(PlayerStatus.ACTIVE);
-        else
-            result.setStatus(PlayerStatus.RETIRED);
+        engine.Player player = findPlayer(playerDetails.getPlayerID());
+        engine.Game game = findGameByPlayer(player);
+        if(game.getGameDetails().getGameStatus() == engine.Game.GameStatus.WAITING)
+            result.setStatus(PlayerStatus.JOINED);
+        else{
+            if(playerDetails.getIsActive())
+                result.setStatus(PlayerStatus.ACTIVE);
+            else
+                result.setStatus(PlayerStatus.RETIRED);
+        }
         if(playerDetails.getIsHuman())
             result.setType(PlayerType.HUMAN);
         else
             result.setType(PlayerType.COMPUTER);
-        //TODO: set player as join before game start
         
         return result;
     }
