@@ -70,7 +70,7 @@ public class RouletteService {
         List<ws.roulette.Event> results = new ArrayList<>();
         Player player = findPlayer(playerId);
         engine.Game game = findGameByPlayer(player);
-                
+
         if(game == null)
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
         if(eventId < 0 || eventId > engine.Event.eventCounter)
@@ -298,13 +298,20 @@ public class RouletteService {
         }
     }
 
-    private PlayerDetails convertPlayerDetailsToWsFormat(Player.PlayerDetails playerDetails) {
+    private PlayerDetails convertPlayerDetailsToWsFormat(engine.Player.PlayerDetails playerDetails) {
         PlayerDetails result = new PlayerDetails();
 
-        result.setMoney(MIN_NUM);
-        result.setName(OUT_OF_RANGE);
-        result.setStatus(PlayerStatus.JOINED);
-        result.setType(PlayerType.HUMAN);
+        result.setMoney(playerDetails.getAmount().intValue());
+        result.setName(playerDetails.getName());
+        if(playerDetails.getIsActive())
+            result.setStatus(PlayerStatus.ACTIVE);
+        else
+            result.setStatus(PlayerStatus.RETIRED);
+        if(playerDetails.getIsHuman())
+            result.setType(PlayerType.HUMAN);
+        else
+            result.setType(PlayerType.COMPUTER);
+        //TODO: set player as join before game start
         
         return result;
     }
