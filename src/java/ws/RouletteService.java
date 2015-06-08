@@ -601,15 +601,18 @@ case STREET:
             engine.Event event = new engine.Event(engine.Event.EventType.NUMBER_RESULT, game);
             event.setWinningNumber(game.getTable().getCurrentBallPosition().getValue());
             game.getGameDetails().getPlayers().stream().map((player) -> {
-                if (player.getPlayerDetails().getBets() != null) {
+                if(player.getPlayerDetails().getBets().size() < game.getGameDetails().getMinWages()){
+                    player.getPlayerDetails().setIsActive(false);
+                    player.getPlayerDetails().setPlayerAction(engine.Player.PlayerAction.RESIGNED);
+                }
+                else if (player.getPlayerDetails().getBets().size() > 0) {
                     player.getPlayerDetails().getBets().stream().forEach((bet) -> {
                         player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
                     });
                 }
                 return player;
             }).forEach((player) -> {
-                player.getPlayerDetails().setBets(null);
-                player.getPlayerDetails().setPlayerAction(null);
+                player.getPlayerDetails().getBets().clear();
             });
             events.add(event);
             if (!isAnybodyLeft(game)) {
