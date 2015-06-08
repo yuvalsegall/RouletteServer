@@ -615,12 +615,13 @@ case STREET:
                 player.getPlayerDetails().getBets().clear();
             });
             events.add(event);
-            if (!isAnybodyLeft(game)) {
+            if (!isAnybodyLeft(game))
                 events.add(new engine.Event(engine.Event.EventType.GAME_OVER, game));
-            }
-            game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
+            else
+                game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
         }
     }
+    
     private void spinRoulette(engine.Game game) {
         game.getTable().spinRoulette();
     }
