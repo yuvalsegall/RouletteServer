@@ -17,7 +17,6 @@ public class Game {
     private GameDetails gameDetails = null;
     private Table table = null;
     private RulesChecker rulesChecker = null;
-    private GameTimer gameTimer = null;
     
     public Game() {
         this.gameDetails = new GameDetails();
@@ -29,14 +28,6 @@ public class Game {
         this.gameDetails = gameDetails;
         this.table = new Table(gameDetails.getTableType());
         this.rulesChecker = new RulesChecker();
-    }
-
-    public GameTimer getGameTimer() {
-        return gameTimer;
-    }
-
-    public void setGameTimer(GameTimer gameTimer) {
-        this.gameTimer = gameTimer;
     }
     
     public GameDetails getGameDetails() {
@@ -67,19 +58,6 @@ public class Game {
         dest.setGameDetails(this.getGameDetails());
         dest.setRulesChecker(this.getRulesChecker());
         dest.setTable(this.getTable());
-    }
-    
-    public void startTimer(TimerTask task,long interval) {
-        if(gameTimer == null)
-            gameTimer = new GameTimer();
-        gameTimer.startTimer(task, interval);
-    }
-    
-    public void stopTime(){
-        if (gameTimer == null)
-            return;
-        gameTimer.stopTimer();
-        gameTimer = null;
     }
     
     public static class GameDetails {

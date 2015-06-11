@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author yuvalsegall
  */
-public class GameTimer{
+public class PlayerTimer{
     
     private Timer timer;
     private long startTime;
@@ -26,7 +26,8 @@ public class GameTimer{
     }
     
     public void stopTimer(){
-        timer.cancel();
+        if(timer != null)
+            timer.cancel();
     }
     
     public int getTimeOutCount(){

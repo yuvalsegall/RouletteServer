@@ -10,7 +10,7 @@ import controller.exceptions.NumOfPlayersException;
 import controller.exceptions.OutOfRangeException;
 import engine.BadParamsException;
 import engine.Game;
-import engine.GameTimer;
+import engine.PlayerTimer;
 import engine.Player;
 import engine.Table;
 import engine.XMLGame;
@@ -21,7 +21,9 @@ import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimerTask;
 import javax.jws.WebService;
 import javax.xml.bind.JAXBException;
@@ -40,10 +42,10 @@ import ws.roulette.PlayerType;
  */
 @WebService(serviceName = "RouletteWebServiceService", portName = "RouletteWebServicePort", endpointInterface = "ws.roulette.RouletteWebService", targetNamespace = "http://roulette.ws/", wsdlLocation = "WEB-INF/wsdl/RouletteService/RouletteWebServiceService.wsdl")
 public class RouletteService {
-    //TODO: multi threads for calls
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
     private final List<engine.Event> events = new ArrayList<>();
+    private final Map<Integer, PlayerTimer> timers = new HashMap<Integer, engine.PlayerTimer>();
     private static final long MAX_SECONDS_FOR_ROUND = 60;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
@@ -53,7 +55,7 @@ public class RouletteService {
     public static final String OUT_OF_RANGE = "event id out of range";
     public static final String XML_ERROER = "error reading XML";
     public static final String ILLEGAL_BET = "Illegal bet";
-    public static final String TIMER_EXPIRED = "cannot place bet, timer expired";
+    public static final String INACTIVE_PLAYER = "cannot place bet, player inactive";
     private static final int MIN_NUM = 0;
     private static final int MAX_COMP_PLAYERS = 6;
     private static final int MAX_HUMAN_PLAYERS = 6;
@@ -87,7 +89,7 @@ public class RouletteService {
         if(findGame(name) != null)
             throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES, null);
         try {
-            paramsCheck(computerizedPlayers, humanPlayers, minWages, intMaxWages, initalSumOfMoney);
+                paramsCheck(computerizedPlayers, humanPlayers, minWages, intMaxWages, initalSumOfMoney);
             
         } catch(NumOfPlayersException | OutOfRangeException | NumOfHumanPlayersException ex){
             throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), null);
@@ -153,11 +155,12 @@ public class RouletteService {
         else{
             game.getGameDetails().addPlayer(newPlayer);
         }
-        
+        timers.put(pd.getPlayerID(),new PlayerTimer());
         if(gameReadyToStart(game)){
             game.getGameDetails().setGameStatus(Game.GameStatus.ACTIVE);
-            initFirstRound(game);
             events.add(new engine.Event(engine.Event.EventType.GAME_START, game));
+            startPlayersTimers(game);
+            playComputerMoves(game);
         }
         
         return newPlayer.getPlayerDetails().getPlayerID();
@@ -181,22 +184,25 @@ public class RouletteService {
         engine.Game game = findGameByPlayer(player);
         int[] nums;
         nums = convertListToArr(numbers);
+        PlayerTimer timer = timers.get(player.getPlayerDetails().getPlayerID());
+        
         if(game == null)
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+        if(!player.getPlayerDetails().getIsActive())
+                throw new ws.roulette.InvalidParameters_Exception(INACTIVE_PLAYER, null);
+        if(!isAffordableBet(player, betMoney))
+            throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, null);
         try {
-            if(game.getGameTimer() == null)
-                throw new ws.roulette.InvalidParameters_Exception(TIMER_EXPIRED, null);
-            else{
-                player.getPlayerDetails().getBets().add(Bet.makeBet(convertWsBetType(betType), BigInteger.valueOf(betMoney), nums, game.getTable().getTableType()));
-                player.getPlayerDetails().setPlayerAction(Player.PlayerAction.BET);
-            }
+            player.getPlayerDetails().getBets().add(Bet.makeBet(convertWsBetType(betType), BigInteger.valueOf(betMoney), nums, game.getTable().getTableType()));
+            player.getPlayerDetails().setPlayerAction(Player.PlayerAction.BET);
         } catch (BadParamsException ex) {
             throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, null);
         }
         player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(BigInteger.valueOf((int) betMoney * -1)));
         engine.Event event = new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_BET, game, convertWsBetType(betType),0, nums, betMoney);
         events.add(event);
-
+        timer.stopTimer();
+        timer.startTimer(new RemovePlayer(game, player.getPlayerDetails().getPlayerID()), MAX_SECONDS_FOR_ROUND);
     }
 
     public void finishBetting(int playerId) throws ws.roulette.InvalidParameters_Exception {
@@ -206,7 +212,8 @@ public class RouletteService {
         engine.Game game = findGameByPlayer(player);
         player.getPlayerDetails().setPlayerAction(Player.PlayerAction.FINISHED_BETTING);
         events.add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_FINISHED_BETTING, game));
-        checkIfEndRoundBeforeTime(game);
+        if(isGameReadyForEndRound(game))
+            endRound(game);
     }
 
     public void resign(int playerId) throws ws.roulette.InvalidParameters_Exception {
@@ -215,6 +222,7 @@ public class RouletteService {
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
         player.getPlayerDetails().setIsActive(Boolean.FALSE);
         events.add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_RESIGNED, findGameByPlayer(player)));
+        player.getPlayerDetails().setPlayerAction(Player.PlayerAction.RESIGNED);
     }
 
     public java.lang.String createGameFromXML(java.lang.String xmlData) throws ws.roulette.DuplicateGameName_Exception, ws.roulette.InvalidXML_Exception, ws.roulette.InvalidParameters_Exception {
@@ -349,14 +357,6 @@ public class RouletteService {
         return result;
     }
 
-    private engine.Event findEventById(int eventId) {
-        for(engine.Event event : events)
-            if(event.getEventID() == eventId)
-                return event;
-        
-        return null;
-    }
-
     private Event convertEventToWSEvent(engine.Event event) {
         Event wsEvent = new Event();
         
@@ -445,6 +445,7 @@ public class RouletteService {
     }
 
     private Game findGameByPlayer(Player player) {
+        //TODO: n^2 check if really needed
         for(engine.Game game : games)
             for(engine.Player currentPlayer : game.getGameDetails().getPlayers())
                 if(player == currentPlayer)
@@ -519,24 +520,29 @@ case STREET:
         return false;
     }
 
-    private void initFirstRound(Game game) {
-        game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
-        playComputerMoves(game);
+    private void startPlayersTimers(Game game) {
+        for(Player player : game.getGameDetails().getPlayers())
+            if(player.getPlayerDetails().getIsHuman()){
+                PlayerTimer timer = timers.get(player.getPlayerDetails().getPlayerID());
+                timer.startTimer(new RemovePlayer(game, player.getPlayerDetails().getPlayerID()), MAX_SECONDS_FOR_ROUND);
+            }
     }
 
-    private void checkIfEndRoundBeforeTime(Game game) {
+    private boolean isGameReadyForEndRound(Game game) {
         int readyPlayers = 0;
-        int humans = game.getGameDetails().getHumanPlayers();
+        int activeHumans = 0;
         
         for(engine.Player player : game.getGameDetails().getPlayers())
-            if(player.getPlayerDetails().getIsHuman() || player.getPlayerDetails().getPlayerAction() == engine.Player.PlayerAction.FINISHED_BETTING)
-                readyPlayers++;
-        if(readyPlayers == humans){
-            game.getGameTimer().stopTimer();
-            game.setGameTimer(new GameTimer());
-            game.getGameTimer().startTimer(new endRound(game), 0);
+            if(player.getPlayerDetails().getIsHuman() && player.getPlayerDetails().getIsActive()){
+                activeHumans++;
+                if(player.getPlayerDetails().getPlayerAction() == engine.Player.PlayerAction.FINISHED_BETTING)
+                readyPlayers++;    
+            }
+        if(readyPlayers == activeHumans){
+            return true;
         }
-            
+        
+        return false;
     }
 
     private int[] convertListToArr(List<Integer> numbers) {
@@ -581,46 +587,59 @@ case STREET:
         
         return count;
     }
+
+    private boolean isAffordableBet(Player player, int betMoney) {
+        return player.getPlayerDetails().getMoney().intValue() >= betMoney;
+    }
     
-    public class endRound extends TimerTask{
-        engine.Game game;
-        
-        public endRound(engine.Game game){
+    private class RemovePlayer extends TimerTask{
+        private engine.Game game;
+        private int playerId;
+
+        public RemovePlayer(engine.Game game, int playerId){
             this.game = game;
+            this.playerId = playerId;
         }
         
         @Override
         public void run() {
-            endRound();
+            removePlayerFromGame();
+        }
+
+        private void removePlayerFromGame() {
+            for(Player currentPlayer : game.getGameDetails().getPlayers())
+                if(currentPlayer.getPlayerDetails().getPlayerID() == playerId){
+                    events.add(new engine.Event(currentPlayer.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_RESIGNED, game));
+                    currentPlayer.getPlayerDetails().setIsActive(false);
+                    currentPlayer.getPlayerDetails().setPlayerAction(engine.Player.PlayerAction.RESIGNED);
+                    if(isGameReadyForEndRound(game))
+                        endRound(game);
+                    break;
+                }
+            
         }
         
-        private void endRound(){
-            game.getGameTimer().stopTimer();
-            game.setGameTimer(null);
-            spinRoulette(game);
-            engine.Event event = new engine.Event(engine.Event.EventType.NUMBER_RESULT, game);
-            event.setWinningNumber(game.getTable().getCurrentBallPosition().getValue());
-            game.getGameDetails().getPlayers().stream().map((player) -> {
-                if(player.getPlayerDetails().getBets().size() < game.getGameDetails().getMinWages()){
-                    player.getPlayerDetails().setIsActive(false);
-                    player.getPlayerDetails().setPlayerAction(engine.Player.PlayerAction.RESIGNED);
-                }
-                else if (player.getPlayerDetails().getBets().size() > 0) {
-                    player.getPlayerDetails().getBets().stream().forEach((bet) -> {
-                        player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
-                    });
-                }
-                return player;
-            }).forEach((player) -> {
-                player.getPlayerDetails().getBets().clear();
-            });
-            events.add(event);
-            if (!isAnybodyLeft(game))
-                events.add(new engine.Event(engine.Event.EventType.GAME_OVER, game));
-            else
-                game.startTimer(new endRound(game), MAX_SECONDS_FOR_ROUND);
-        }
+        
     }
+    
+    private void endRound(Game game){
+        spinRoulette(game);
+        engine.Event event = new engine.Event(engine.Event.EventType.NUMBER_RESULT, game);
+        event.setWinningNumber(game.getTable().getCurrentBallPosition().getValue());
+        game.getGameDetails().getPlayers().stream().map((player) -> {
+            if (player.getPlayerDetails().getBets().size() > 0) {
+                player.getPlayerDetails().getBets().stream().forEach((bet) -> {
+                    player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
+                });
+            }
+            return player;
+        }).forEach((player) -> {
+            player.getPlayerDetails().getBets().clear();
+        });
+        events.add(event);
+        if (!isAnybodyLeft(game))
+            events.add(new engine.Event(engine.Event.EventType.GAME_OVER, game));
+    }    
     
     private void spinRoulette(engine.Game game) {
         game.getTable().spinRoulette();
