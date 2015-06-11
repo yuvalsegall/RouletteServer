@@ -22,7 +22,7 @@ public class PlayerTimer{
     public void startTimer(TimerTask task, long interval){
         timer = new Timer();
         startTime = Calendar.getInstance().getTimeInMillis();
-        timer.schedule(task, interval);
+        timer.schedule(task, TimeUnit.SECONDS.toMillis(interval));
     }
     
     public void stopTimer(){

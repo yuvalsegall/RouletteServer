@@ -2,6 +2,7 @@ package engine;
 
 import engine.bets.Bet;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -13,7 +14,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 public class Player implements Comparable<Player> {
 
     private final PlayerDetails playerDetails;
-    private static int idCounter = 999;
+    private static int idCounter = 1000;
 
     public Player(PlayerDetails playerDetials) {
         this.playerDetails = playerDetials;
@@ -50,6 +51,7 @@ public class Player implements Comparable<Player> {
             this.amount = new SimpleIntegerProperty();
             this.isActive = true;
             setMoney(money);
+            bets = new ArrayList<>();
         }
 
         public PlayerDetails() {
@@ -59,6 +61,7 @@ public class Player implements Comparable<Player> {
             this.amount = new SimpleIntegerProperty();
             this.isActive = true;
             setMoney(money);
+            bets = new ArrayList<>();
         }
 
         public PlayerAction getPlayerAction() {

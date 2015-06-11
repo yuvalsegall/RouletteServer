@@ -17,6 +17,7 @@ public class Game {
     private GameDetails gameDetails = null;
     private Table table = null;
     private RulesChecker rulesChecker = null;
+    private final List<engine.Event> events = new ArrayList<>();
     
     public Game() {
         this.gameDetails = new GameDetails();
@@ -28,6 +29,10 @@ public class Game {
         this.gameDetails = gameDetails;
         this.table = new Table(gameDetails.getTableType());
         this.rulesChecker = new RulesChecker();
+    }
+
+    public List<Event> getEvents() {
+        return events;
     }
     
     public GameDetails getGameDetails() {
