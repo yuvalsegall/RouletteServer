@@ -46,7 +46,7 @@ public class RouletteService {
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<Integer, engine.PlayerTimer>();
-    private static final long MAX_SECONDS_FOR_ROUND = 600;
+    private static final long MAX_SECONDS_FOR_ROUND = 6;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
     public static final String PLAYER_EXCISTES = "Player name in game taken";
@@ -625,21 +625,15 @@ case STREET:
         public void run() {
             removePlayerFromGame();
         }
-
+        
         private void removePlayerFromGame() {
             for(Player currentPlayer : game.getGameDetails().getPlayers())
                 if(currentPlayer.getPlayerDetails().getPlayerID() == playerId){
                     game.getEvents().add(new engine.Event(currentPlayer.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_RESIGNED, game));
                     currentPlayer.getPlayerDetails().setIsActive(false);
                     currentPlayer.getPlayerDetails().setPlayerAction(engine.Player.PlayerAction.RESIGNED);
-//                    playerRemoved = new SimpleBooleanProperty();
-//                    lastGameWithRemovedPlayer = game.getGameDetails().getGameName();
-//                    playerRemoved.addListener((observable, oldValue, newValue) -> {
-//                      playerRemovedChanged();
-//                    });
-//                    playerRemoved.set(true);
-//                    if(isGameReadyForEndRound(game))
-//                        endRound(game);
+                    if(isGameReadyForEndRound(game))
+                        endRound(game);
                     System.out.println("removed player" + currentPlayer.getPlayerDetails().getPlayerID());
                     break;
                 }
