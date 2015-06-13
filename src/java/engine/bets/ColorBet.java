@@ -26,7 +26,6 @@ public class ColorBet extends Bet{
     public BigInteger winningSum(Cell winnerCell, int numOfCellsInRoulette) {
         if(winnerCell.getColor() == color){
             BigInteger payout = (BigInteger.valueOf(numOfCellsInRoulette).divide(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))).subtract(BigInteger.ONE);
-            System.out.println("winningSum = " + getBetAmount().add(getBetAmount().multiply(payout)));
             return getBetAmount().add(getBetAmount().multiply(payout));
         }
         

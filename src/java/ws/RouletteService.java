@@ -669,10 +669,10 @@ case STREET:
                     BigInteger moneyBefore = player.getPlayerDetails().getMoney();
                     player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
                     int earned = player.getPlayerDetails().getMoney().intValue() - moneyBefore.intValue();
-                    game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, 0, null, earned));
+                    game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, timers.get(player.getPlayerDetails().getPlayerID()).getTimeOutCount(), null, earned));
                 });
             }
-            return player;//Results Scores
+            return player;
         }).forEach((player) -> {
             player.getPlayerDetails().getBets().clear();
         });
