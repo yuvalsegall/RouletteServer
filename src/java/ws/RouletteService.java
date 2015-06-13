@@ -45,7 +45,7 @@ import ws.roulette.PlayerType;
 public class RouletteService {
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
-    private final Map<Integer, PlayerTimer> timers = new HashMap<Integer, engine.PlayerTimer>();
+    private final Map<Integer, PlayerTimer> timers = new HashMap<>();
     private static final long MAX_SECONDS_FOR_ROUND = 600;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
