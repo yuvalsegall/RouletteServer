@@ -46,7 +46,7 @@ public class RouletteService {
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<Integer, engine.PlayerTimer>();
-    private static final long MAX_SECONDS_FOR_ROUND = 6;
+    private static final long MAX_SECONDS_FOR_ROUND = 60;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
     public static final String PLAYER_EXCISTES = "Player name in game taken";
@@ -462,7 +462,6 @@ public class RouletteService {
     }
 
     private Game findGameByPlayer(Player player) {
-        //TODO: n^2 check if really needed
         for(engine.Game game : games)
             for(engine.Player currentPlayer : game.getGameDetails().getPlayers())
                 if(player == currentPlayer)
@@ -669,15 +668,5 @@ case STREET:
     
     private boolean isAnybodyLeft(engine.Game game){
         return game.getGameDetails().getPlayers().stream().anyMatch((player) -> (player.getPlayerDetails().getIsActive() && player.getPlayerDetails().getIsHuman()));        
-    }
-    
-    private void playerRemovedChanged(){
-//        if(lastGameWithRemovedPlayer != null){
-//            engine.Game game = findGame(lastGameWithRemovedPlayer);
-//            if(isGameReadyForEndRound(game))
-//                endRound(game);
-//        }
-//        System.out.println("removed player");
-//        playerRemoved = null;
     }
 }
