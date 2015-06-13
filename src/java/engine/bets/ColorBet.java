@@ -25,7 +25,8 @@ public class ColorBet extends Bet{
     @Override
     public BigInteger winningSum(Cell winnerCell, int numOfCellsInRoulette) {
         if(winnerCell.getColor() == color){
-            return getBetAmount().add(getBetAmount().multiply(BigInteger.ONE.divide(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))).multiply(BigInteger.valueOf(numOfCellsInRoulette).subtract(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))));
+            return getBetAmount().add(getBetAmount().multiply((BigInteger.valueOf(numOfCellsInRoulette).divide(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))).subtract(BigInteger.ONE)));
+//            return getBetAmount().add(getBetAmount().multiply(BigInteger.ONE.divide(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))).multiply(BigInteger.valueOf(numOfCellsInRoulette).subtract(BigInteger.valueOf(NUM_OF_SAME_COLOR_CELLS))));
         }
         
         return BigInteger.ZERO;

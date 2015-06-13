@@ -18,6 +18,7 @@ public class Game {
     private Table table = null;
     private RulesChecker rulesChecker = null;
     private final List<engine.Event> events = new ArrayList<>();
+    private int eventCounter = 1;
     
     public Game() {
         this.gameDetails = new GameDetails();
@@ -63,6 +64,10 @@ public class Game {
         dest.setGameDetails(this.getGameDetails());
         dest.setRulesChecker(this.getRulesChecker());
         dest.setTable(this.getTable());
+    }
+
+    public int getEventCounter() {
+        return eventCounter++;
     }
     
     public static class GameDetails {

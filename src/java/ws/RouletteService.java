@@ -46,7 +46,7 @@ public class RouletteService {
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<Integer, engine.PlayerTimer>();
-    private static final long MAX_SECONDS_FOR_ROUND = 60;
+    private static final long MAX_SECONDS_FOR_ROUND = 600;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
     public static final String PLAYER_EXCISTES = "Player name in game taken";
@@ -72,19 +72,26 @@ public class RouletteService {
         Player player = findPlayer(playerId);
         engine.Game game = findGameByPlayer(player);
         List<engine.Event> targetEvents;
-
-        if(game == null)
+//        System.out.println("getEvents started from player: " + playerId);
+        if(game == null){
+            System.out.println("exception in getEvents: playerId="+ playerId);
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
-        if(eventId < 0 || eventId > engine.Event.eventCounter)
+        }
+        if(eventId < 0 || eventId > game.getEvents().size()){
+            System.out.println("exception in getEvents: eventId=" + eventId + " while size is:" + game.getEvents().size());
             throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, null);
-        if(eventId == 0)
+        }
+        if(eventId == 0){
+            targetEvents = game.getEvents().subList(0, game.getEvents().size());
+//            System.out.println("sending events:"+0 + "to" + game.getEvents().size());
+        }
+        else{
             targetEvents = game.getEvents().subList(eventId, game.getEvents().size());
-        else
-            targetEvents = game.getEvents().subList(eventId+1, game.getEvents().size());
+//            System.out.println("sending events:"+ (eventId) + "to" + (game.getEvents().size()));
+        }
         for(engine.Event event : targetEvents)
             results.add(convertEventToWSEvent(event));
 
-        System.out.println("get event:" + results);
         return results;
     }
 
@@ -116,7 +123,7 @@ public class RouletteService {
         }
         result = convertGameDetailsToWsFormat(gameDetails);
         
-        System.out.println("getGameDetails");
+        System.out.println("getGameDetails for game: " + gameName);
         return result;
     }
 
@@ -170,7 +177,7 @@ public class RouletteService {
             playComputerMoves(game);
         }
         
-        System.out.println("joinGame" + newPlayer.getPlayerDetails().getPlayerID());
+        System.out.println("joinGame player: " + newPlayer.getPlayerDetails().getPlayerID());
         return newPlayer.getPlayerDetails().getPlayerID();
     }
 
@@ -268,13 +275,11 @@ public class RouletteService {
             results.add(convertPlayerDetailsToWsFormat(player.getPlayerDetails()));
         });
         
-        System.out.println("getPlayersDetails");
+        System.out.println("getPlayersDetails, gameName: " + gameName);
         return results;
     }
 
-    private Game.GameDetails getGameDetailsByName(String gameName) {
-        System.out.println("getGameDetailsByName");
-        
+    private Game.GameDetails getGameDetailsByName(String gameName) {        
         for(Game game : games){
             if(game.getGameDetails().getGameName().equals(gameName))
                 return game.getGameDetails();
@@ -376,18 +381,28 @@ public class RouletteService {
 
     private Event convertEventToWSEvent(engine.Event event) {
         Event wsEvent = new Event();
-        
+        System.out.println("print event:{");
         wsEvent.setAmount(event.getAmount());
-        if(event.getBetType() != null)
+        System.out.println("amount: " + wsEvent.getAmount());
+        if(event.getBetType() != null){
             wsEvent.setBetType(convertBetTypeToWs(event.getBetType()));
+            System.out.println("betType: " + wsEvent.getBetType());
+        }
         wsEvent.setId(event.getEventID());
-        if(event.getPlayerName() != null)
+        System.out.println("eventId: " + wsEvent.getId());
+        if(event.getPlayerName() != null){
             wsEvent.setPlayerName(event.getPlayerName());
+            System.out.println("playername: " + wsEvent.getPlayerName());
+        }
         wsEvent.setTimeout(event.getTimeoutCount());
+        System.out.println("timeout:" + wsEvent.getTimeout());
         wsEvent.setType(convertEventTypeToWs(event.getEventType()));
+        System.out.println("eventType:" + wsEvent.getType());
         wsEvent.setWinningNumber(event.getWinningNumber());
-        
+        System.out.println("winning number: " + wsEvent.getWinningNumber());
+        System.out.println("}");
         return wsEvent;
+        
     }
 
     private EventType convertEventTypeToWs(engine.Event.EventType eventType) {
@@ -407,6 +422,8 @@ public class RouletteService {
                 return EventType.PLAYER_BET;
             case PLAYER_FINISHED_BETTING:
                 return EventType.PLAYER_FINISHED_BETTING;
+            case RESULT_SCORE:
+                    return EventType.RESULTS_SCORES;
         }
         
         return null;
@@ -540,7 +557,7 @@ case STREET:
         for(Player player : game.getGameDetails().getPlayers())
             if(player.getPlayerDetails().getIsHuman()){
                 PlayerTimer timer = timers.get(player.getPlayerDetails().getPlayerID());
-                timer.startTimer(new RemovePlayer(game, player.getPlayerDetails().getPlayerID()), MAX_SECONDS_FOR_ROUND);
+                timer.startTimer(new RemovePlayer(game, player.getPlayerDetails().getPlayerID()), TimeUnit.SECONDS.toMillis(MAX_SECONDS_FOR_ROUND));
             }
     }
 
@@ -645,17 +662,21 @@ case STREET:
         spinRoulette(game);
         engine.Event event = new engine.Event(engine.Event.EventType.NUMBER_RESULT, game);
         event.setWinningNumber(game.getTable().getCurrentBallPosition().getValue());
+        game.getEvents().add(event);
         game.getGameDetails().getPlayers().stream().map((player) -> {
             if (player.getPlayerDetails().getBets().size() > 0) {
                 player.getPlayerDetails().getBets().stream().forEach((bet) -> {
+                    BigInteger moneyBefore = player.getPlayerDetails().getMoney();
                     player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
+                    int earned = player.getPlayerDetails().getMoney().intValue() - moneyBefore.intValue();
+                    game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, 0, null, earned));
                 });
             }
-            return player;
+            return player;//Results Scores
         }).forEach((player) -> {
             player.getPlayerDetails().getBets().clear();
         });
-        game.getEvents().add(event);
+        
         System.out.println("new number="+ game.getTable().getCurrentBallPosition().getValue());
         playComputerMoves(game);
         if (!isAnybodyLeft(game))

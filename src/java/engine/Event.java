@@ -1,11 +1,6 @@
 package engine;
 
-import engine.bets.Bettable;
 import engine.bets.Bet;
-import engine.bets.NumbersBet;
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 /**
  *
@@ -15,7 +10,6 @@ public class Event {
 
     private String playerName;
     private int eventID;
-    public static int eventCounter = 0;
     private EventType eventType;
     private Game game;
     private Bet.BetType playerBet;
@@ -26,13 +20,11 @@ public class Event {
     private int amount;
 
     public Event(String playerName, EventType eventType, Game game, Bet.BetType playerBet, int timeoutCount, int[] numbers, int amount) {
-        if (eventType == EventType.NUMBER_RESULT) {
-            this.playerName = playerName;
-        }
+        this.playerName = playerName;
         this.eventType = eventType;
         this.game = game;
         this.playerBet = playerBet;
-        this.eventID = eventCounter++;
+        this.eventID = game.getEventCounter();
         this.playerAction = generatePlayerActionFromEventType(eventType);
         this.timeoutCount = timeoutCount;
         this.numbers = numbers;
@@ -49,7 +41,7 @@ public class Event {
 
     public static enum EventType {
 
-        GAME_START, GAME_OVER, GAME_WINNER, NUMBER_RESULT, PLAYER_RESIGNED, PLAYER_BET, PLAYER_FINISHED_BETTING;
+        GAME_START, GAME_OVER, GAME_WINNER, NUMBER_RESULT, PLAYER_RESIGNED, PLAYER_BET, PLAYER_FINISHED_BETTING, RESULT_SCORE;
     }
 
     private Player.PlayerAction generatePlayerActionFromEventType(EventType eventType) {
