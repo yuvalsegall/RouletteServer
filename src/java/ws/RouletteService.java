@@ -29,9 +29,11 @@ import java.util.concurrent.TimeUnit;
 import javax.jws.WebService;
 import javax.xml.bind.JAXBException;
 import ws.roulette.BetType;
+import ws.roulette.DuplicateGameName;
 import ws.roulette.Event;
 import ws.roulette.EventType;
 import ws.roulette.GameDetails;
+import ws.roulette.GameDoesNotExists;
 import ws.roulette.GameStatus;
 import ws.roulette.InvalidParameters;
 import ws.roulette.PlayerDetails;
@@ -46,7 +48,6 @@ import ws.roulette.RouletteFault;
 @WebService(serviceName = "RouletteWebServiceService", portName = "RouletteWebServicePort", endpointInterface = "ws.roulette.RouletteWebService", targetNamespace = "http://roulette.ws/", wsdlLocation = "WEB-INF/wsdl/RouletteService/RouletteWebServiceService.wsdl")
 public class RouletteService {
     //TODO: server on Amazon?
-    //TODO: check what is the second var on all exceptions
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<>();
     private static final long MAX_SECONDS_FOR_ROUND = 10;
@@ -84,7 +85,7 @@ public class RouletteService {
         }
         if(eventId < 0 || eventId > game.getEvents().size()){
             System.out.println("exception in getEvents: eventId=" + eventId + " while size is:" + game.getEvents().size());
-            throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, null);
+            throw new ws.roulette.InvalidParameters_Exception(OUT_OF_RANGE, getInvalidParameters(eventId, OUT_OF_RANGE));
         }
         if(eventId == 0){
             targetEvents = game.getEvents().subList(0, game.getEvents().size());
@@ -99,32 +100,24 @@ public class RouletteService {
 
         return results;
     }
-
-    private InvalidParameters getInvalidParameters(Object var, String msg){
-        InvalidParameters error = new InvalidParameters();
-        RouletteFault fault = new RouletteFault();
-        fault.setFaultCode(msg);
-        fault.setFaultString(msg);
-        error.setFaultInfo(fault);
-        error.setMessage(msg);
-        
-        return error;
-    }
-    
     
     public void createGame(int computerizedPlayers, int humanPlayers, int initalSumOfMoney, int intMaxWages, int minWages, java.lang.String name, ws.roulette.RouletteType rouletteType) throws ws.roulette.DuplicateGameName_Exception, ws.roulette.InvalidParameters_Exception {
         Table.TableType tableType;
         if(findGame(name) != null)
-            throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES, null);
+            throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES, getDuplicateGameName(name, GAME_EXCISTES));
         try {
                 paramsCheck(computerizedPlayers, humanPlayers, minWages, intMaxWages, initalSumOfMoney);
             
-        } catch(NumOfPlayersException | OutOfRangeException | NumOfHumanPlayersException ex){
-            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), null);
+        }catch(NumOfPlayersException ex){
+            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), getInvalidParameters(humanPlayers+computerizedPlayers, ex.getMessage()));
+        }catch(OutOfRangeException ex){
+            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), getInvalidParameters(minWages, ex.getMessage()));
+        }catch(NumOfHumanPlayersException ex){
+            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), getInvalidParameters(humanPlayers, ex.getMessage()));
         }
                 
         tableType = rouletteType == ws.roulette.RouletteType.AMERICAN ? Table.TableType.AMERICAN : Table.TableType.FRENCH;
-        Game.GameDetails gd = new Game.GameDetails(name, computerizedPlayers, humanPlayers, minWages, minWages, tableType, initalSumOfMoney, Game.GameStatus.WAITING);
+        Game.GameDetails gd = new Game.GameDetails(name, computerizedPlayers, humanPlayers, minWages, intMaxWages, tableType, initalSumOfMoney, Game.GameStatus.WAITING);
         Game game = new Game(gd);
         //createComputerPlayers(game);
         games.add(game);
@@ -136,7 +129,7 @@ public class RouletteService {
         Game.GameDetails gameDetails = getGameDetailsByName(gameName);
         
         if(gameDetails == null){
-            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, null);
+            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, getGameDoesNotExists(gameName, GAME_NOT_FOUND));
         }
         result = convertGameDetailsToWsFormat(gameDetails);
         
@@ -159,12 +152,12 @@ public class RouletteService {
         Game game = findGame(gameName);
         
         if(game == null)
-            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, null);
+            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, getGameDoesNotExists(gameName, GAME_NOT_FOUND));
         if(game.getGameDetails().getGameStatus() != Game.GameStatus.WAITING)
-            throw new ws.roulette.InvalidParameters_Exception(GAME_NOT_WAITING, null);
+            throw new ws.roulette.InvalidParameters_Exception(GAME_NOT_WAITING, getInvalidParameters(game.getGameDetails().getGameStatus(), GAME_NOT_WAITING));
         for(Player player : game.getGameDetails().getPlayers()){
             if(player.getPlayerDetails().getName().equals(playerName))
-                throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
+                throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, getInvalidParameters(playerName, PLAYER_EXCISTES));
         }
         Player.PlayerDetails pd = new Player.PlayerDetails(playerName, Boolean.TRUE, BigInteger.valueOf(game.getGameDetails().getInitialSumOfMoney()));
         Player newPlayer = new Player(pd);
@@ -172,7 +165,7 @@ public class RouletteService {
             Player playerInLoadedGame = GetPlayerFromGame(newPlayer.getPlayerDetails().getName(), game);
             if(playerInLoadedGame.getPlayerDetails().getIsHuman()){
                 if(playerInLoadedGame.getPlayerDetails().getPlayerID() != 0){
-                    throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
+                    throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, getInvalidParameters(playerName, PLAYER_EXCISTES));
                 }
                 else{
                     game.getGameDetails().getPlayers().remove(playerInLoadedGame);
@@ -180,7 +173,7 @@ public class RouletteService {
                 }
             }
             else{
-                throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, null);
+                throw new ws.roulette.InvalidParameters_Exception(PLAYER_EXCISTES, getInvalidParameters(playerName, PLAYER_EXCISTES));
             }
         }
         else{
@@ -203,10 +196,10 @@ public class RouletteService {
         
         result = findPlayer(playerId);
         if(result == null)
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, getInvalidParameters(playerId, PLAYER_DOESNT_EXCISTES));
         engine.Game game = findGameByPlayer(result);
         if(game.getGameDetails().getGameStatus() == engine.Game.GameStatus.FINISHED)
-            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, null);
+            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, getGameDoesNotExists(playerId, GAME_NOT_FOUND));
         
         System.out.println("getPlayerDetails");
         return convertPlayerDetailsToWsFormat(result.getPlayerDetails());
@@ -220,18 +213,18 @@ public class RouletteService {
         PlayerTimer timer = timers.get(player.getPlayerDetails().getPlayerID());
         
         if(game == null)
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, getInvalidParameters(playerId, PLAYER_DOESNT_EXCISTES));
         if(!player.getPlayerDetails().getIsActive())
-                throw new ws.roulette.InvalidParameters_Exception(INACTIVE_PLAYER, null);
+                throw new ws.roulette.InvalidParameters_Exception(INACTIVE_PLAYER, getInvalidParameters(player.getPlayerDetails().getIsActive(), INACTIVE_PLAYER));
         if(!isAffordableBet(player, betMoney))
-            throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, null);
+            throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, getInvalidParameters(betMoney, ILLEGAL_BET));
         if(game.getGameDetails().getMaxWages() == player.getPlayerDetails().getBets().size())
-            throw new ws.roulette.InvalidParameters_Exception(MAX_NUM_OF_BETTS, null);
+            throw new ws.roulette.InvalidParameters_Exception(MAX_NUM_OF_BETTS, getInvalidParameters(player.getPlayerDetails().getBets().size(), MAX_NUM_OF_BETTS));
         try {
             player.getPlayerDetails().getBets().add(Bet.makeBet(convertWsBetType(betType), BigInteger.valueOf(betMoney), nums, game.getTable().getTableType()));
             player.getPlayerDetails().setPlayerAction(Player.PlayerAction.BET);
         } catch (BadParamsException ex) {
-            throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, null);
+            throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, getInvalidParameters(ex.getMessage(), ex.getMessage()));
         }
         player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(BigInteger.valueOf((int) betMoney * -1)));
         engine.Event event = new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_BET, game, convertWsBetType(betType),0, nums, betMoney);
@@ -244,10 +237,10 @@ public class RouletteService {
     public void finishBetting(int playerId) throws ws.roulette.InvalidParameters_Exception {
         engine.Player player = findPlayer(playerId);
         if(player == null)
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, getInvalidParameters(playerId, PLAYER_DOESNT_EXCISTES));
         engine.Game game = findGameByPlayer(player);
-        if(allowedFinishBetting(player, game))
-            throw new ws.roulette.InvalidParameters_Exception(MIN_BETS_ERR, null);
+        if(!allowedFinishBetting(player, game))
+            throw new ws.roulette.InvalidParameters_Exception(MIN_BETS_ERR, getInvalidParameters(game.getGameDetails().getMinWages(), PLAYER_DOESNT_EXCISTES));
         player.getPlayerDetails().setPlayerAction(Player.PlayerAction.FINISHED_BETTING);
         game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_FINISHED_BETTING, game));
         if(isGameReadyForEndRound(game))
@@ -259,7 +252,7 @@ public class RouletteService {
         engine.Player player = findPlayer(playerId);
         engine.Game game = findGameByPlayer(player);
         if(player == null)
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, getInvalidParameters(playerId, PLAYER_DOESNT_EXCISTES));
         player.getPlayerDetails().setIsActive(Boolean.FALSE);
         game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_RESIGNED, findGameByPlayer(player)));
         player.getPlayerDetails().setPlayerAction(Player.PlayerAction.RESIGNED);
@@ -273,11 +266,11 @@ public class RouletteService {
         } catch (JAXBException ex) {
             throw new ws.roulette.InvalidXML_Exception(XML_ERROER, null);
         } catch (BadParamsException ex) {
-            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), null);
+            throw new ws.roulette.InvalidParameters_Exception(ex.getMessage(), getInvalidParameters(null, ex.getMessage()));
         }
         
         if(findGame(game.getGameDetails().getGameName()) != null)
-            throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES ,null);
+            throw new ws.roulette.DuplicateGameName_Exception(GAME_EXCISTES ,getDuplicateGameName(game.getGameDetails().getGameName(), GAME_EXCISTES));
         game.getGameDetails().setIsGameFromXML(true);
         game.getGameDetails().setGameStatus(Game.GameStatus.WAITING);
         games.add(game);
@@ -291,7 +284,7 @@ public class RouletteService {
         List<ws.roulette.PlayerDetails> results = new ArrayList<>();
         
         if(game == null)
-            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, null);
+            throw new ws.roulette.GameDoesNotExists_Exception(GAME_NOT_FOUND, getGameDoesNotExists(gameName, GAME_NOT_FOUND));
         game.getGameDetails().getPlayers().stream().forEach((player) -> {
             results.add(convertPlayerDetailsToWsFormat(player.getPlayerDetails()));
         });
@@ -707,5 +700,38 @@ case STREET:
     
     private boolean isAnybodyLeft(engine.Game game){
         return game.getGameDetails().getPlayers().stream().anyMatch((player) -> (player.getPlayerDetails().getIsActive() && player.getPlayerDetails().getIsHuman()));        
+    }
+    
+    private InvalidParameters getInvalidParameters(Object var, String msg){
+        InvalidParameters invalidParameters = new InvalidParameters();
+        
+        invalidParameters.setFaultInfo(getRouletteFault(var, msg));
+        invalidParameters.setMessage(msg);
+        
+        return invalidParameters;
+    }
+    
+    private DuplicateGameName getDuplicateGameName(Object var, String msg){
+        DuplicateGameName duplicateGameName = new DuplicateGameName();
+        duplicateGameName.setFaultInfo(getRouletteFault(var, msg));
+        duplicateGameName.setMessage(msg);
+        
+        return duplicateGameName;
+    }
+    
+    private GameDoesNotExists getGameDoesNotExists(Object var, String msg){
+        GameDoesNotExists gameDoesNotExists = new GameDoesNotExists();
+        gameDoesNotExists.setFaultInfo(getRouletteFault(var, msg));
+        gameDoesNotExists.setMessage(msg);
+        
+        return gameDoesNotExists;
+    }
+    
+    private RouletteFault getRouletteFault(Object var, String msg){
+        RouletteFault rouletteFault = new RouletteFault();
+        rouletteFault.setFaultCode(var.toString());
+        rouletteFault.setFaultString(msg);
+        
+        return rouletteFault;
     }
 }

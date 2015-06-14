@@ -38,6 +38,8 @@ public abstract class Bet implements Bettable {
     public static Bet makeBet(BetType type, BigInteger betMoney, int[] numbers, TableType tableType) throws BadParamsException {
         Bet bet = null;
 
+        if(betMoney.intValue() < 1)
+            throw new BadParamsException();
         switch (type) {
             case SNAKE: {
                 if (numbers != null) {
