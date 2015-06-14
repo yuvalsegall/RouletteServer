@@ -44,9 +44,10 @@ import ws.roulette.PlayerType;
 @WebService(serviceName = "RouletteWebServiceService", portName = "RouletteWebServicePort", endpointInterface = "ws.roulette.RouletteWebService", targetNamespace = "http://roulette.ws/", wsdlLocation = "WEB-INF/wsdl/RouletteService/RouletteWebServiceService.wsdl")
 public class RouletteService {
     //TODO: server on Amazon?
+    //TODO: check what is the second var on all exceptions
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<>();
-    private static final long MAX_SECONDS_FOR_ROUND = 600;
+    private static final long MAX_SECONDS_FOR_ROUND = 10;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
     public static final String PLAYER_EXCISTES = "Player name in game taken";
@@ -109,7 +110,7 @@ public class RouletteService {
         tableType = rouletteType == ws.roulette.RouletteType.AMERICAN ? Table.TableType.AMERICAN : Table.TableType.FRENCH;
         Game.GameDetails gd = new Game.GameDetails(name, computerizedPlayers, humanPlayers, minWages, minWages, tableType, initalSumOfMoney, Game.GameStatus.WAITING);
         Game game = new Game(gd);
-        createComputerPlayers(game);
+        //createComputerPlayers(game);
         games.add(game);
         System.out.println("game created");
     }
@@ -594,6 +595,8 @@ case STREET:
     private void playComputerMoves(Game game) {
         game.getGameDetails().getPlayers().stream().filter((player) -> (!player.getPlayerDetails().getIsHuman())).filter((player) -> (player.getPlayerDetails().getAmount().intValue() > 0)).forEach((player) -> {
             player.getPlayerDetails().getBets().add(new ColorBet(BigInteger.ONE, Bet.BetType.NOIR, Color.black));
+            engine.Event event = new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_BET, game, convertWsBetType(BetType.NOIR),0, null, 1);
+        game.getEvents().add(event);
         });
     }
 
@@ -605,6 +608,7 @@ case STREET:
         return null;
     }
 
+    //TODO: delete
     private void createComputerPlayers(Game game) {
         int computerPlayers = game.getGameDetails().getComputerPlayers();
         
@@ -659,26 +663,27 @@ case STREET:
     }
     
     private void endRound(Game game){
+        playComputerMoves(game);
         spinRoulette(game);
         engine.Event event = new engine.Event(engine.Event.EventType.NUMBER_RESULT, game);
         event.setWinningNumber(game.getTable().getCurrentBallPosition().getValue());
         game.getEvents().add(event);
-        game.getGameDetails().getPlayers().stream().map((player) -> {
+        for(Player player : game.getGameDetails().getPlayers()){
             if (player.getPlayerDetails().getBets().size() > 0) {
-                player.getPlayerDetails().getBets().stream().forEach((bet) -> {
+                for(engine.bets.Bet bet : player.getPlayerDetails().getBets()){
                     BigInteger moneyBefore = player.getPlayerDetails().getMoney();
                     player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
                     int earned = player.getPlayerDetails().getMoney().intValue() - moneyBefore.intValue();
-                    game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, timers.get(player.getPlayerDetails().getPlayerID()).getTimeOutCount(), null, earned));
-                });
+                    if(player.getPlayerDetails().getIsHuman())
+                        game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, timers.get(player.getPlayerDetails().getPlayerID()).getTimeOutCount(), null, earned));
+                    else{
+                        game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, 0, null, earned));
+                    }
+                }
             }
-            return player;
-        }).forEach((player) -> {
-            player.getPlayerDetails().getBets().clear();
-        });
-        
+            player.getPlayerDetails().getBets().clear();   
+        }
         System.out.println("new number="+ game.getTable().getCurrentBallPosition().getValue());
-        playComputerMoves(game);
         if (!isAnybodyLeft(game))
             game.getEvents().add(new engine.Event(engine.Event.EventType.GAME_OVER, game));
     }    
