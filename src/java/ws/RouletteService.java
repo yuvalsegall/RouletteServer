@@ -33,9 +33,11 @@ import ws.roulette.Event;
 import ws.roulette.EventType;
 import ws.roulette.GameDetails;
 import ws.roulette.GameStatus;
+import ws.roulette.InvalidParameters;
 import ws.roulette.PlayerDetails;
 import ws.roulette.PlayerStatus;
 import ws.roulette.PlayerType;
+import ws.roulette.RouletteFault;
 
 /**
  *
@@ -57,6 +59,8 @@ public class RouletteService {
     public static final String XML_ERROER = "error reading XML";
     public static final String ILLEGAL_BET = "Illegal bet";
     public static final String INACTIVE_PLAYER = "cannot place bet, player inactive";
+    public static final String MIN_BETS_ERR = "cannot finish betting, must place bet";
+    public static final String MAX_NUM_OF_BETTS = "cannot add more bets";
     private static final int MIN_NUM = 0;
     private static final int MAX_COMP_PLAYERS = 6;
     private static final int MAX_HUMAN_PLAYERS = 6;
@@ -76,7 +80,7 @@ public class RouletteService {
 //        System.out.println("getEvents started from player: " + playerId);
         if(game == null){
             System.out.println("exception in getEvents: playerId="+ playerId);
-            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
+            throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, getInvalidParameters(playerId, PLAYER_DOESNT_EXCISTES));
         }
         if(eventId < 0 || eventId > game.getEvents().size()){
             System.out.println("exception in getEvents: eventId=" + eventId + " while size is:" + game.getEvents().size());
@@ -96,6 +100,18 @@ public class RouletteService {
         return results;
     }
 
+    private InvalidParameters getInvalidParameters(Object var, String msg){
+        InvalidParameters error = new InvalidParameters();
+        RouletteFault fault = new RouletteFault();
+        fault.setFaultCode(msg);
+        fault.setFaultString(msg);
+        error.setFaultInfo(fault);
+        error.setMessage(msg);
+        
+        return error;
+    }
+    
+    
     public void createGame(int computerizedPlayers, int humanPlayers, int initalSumOfMoney, int intMaxWages, int minWages, java.lang.String name, ws.roulette.RouletteType rouletteType) throws ws.roulette.DuplicateGameName_Exception, ws.roulette.InvalidParameters_Exception {
         Table.TableType tableType;
         if(findGame(name) != null)
@@ -209,6 +225,8 @@ public class RouletteService {
                 throw new ws.roulette.InvalidParameters_Exception(INACTIVE_PLAYER, null);
         if(!isAffordableBet(player, betMoney))
             throw new ws.roulette.InvalidParameters_Exception(ILLEGAL_BET, null);
+        if(game.getGameDetails().getMaxWages() == player.getPlayerDetails().getBets().size())
+            throw new ws.roulette.InvalidParameters_Exception(MAX_NUM_OF_BETTS, null);
         try {
             player.getPlayerDetails().getBets().add(Bet.makeBet(convertWsBetType(betType), BigInteger.valueOf(betMoney), nums, game.getTable().getTableType()));
             player.getPlayerDetails().setPlayerAction(Player.PlayerAction.BET);
@@ -228,6 +246,8 @@ public class RouletteService {
         if(player == null)
             throw new ws.roulette.InvalidParameters_Exception(PLAYER_DOESNT_EXCISTES, null);
         engine.Game game = findGameByPlayer(player);
+        if(allowedFinishBetting(player, game))
+            throw new ws.roulette.InvalidParameters_Exception(MIN_BETS_ERR, null);
         player.getPlayerDetails().setPlayerAction(Player.PlayerAction.FINISHED_BETTING);
         game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.PLAYER_FINISHED_BETTING, game));
         if(isGameReadyForEndRound(game))
@@ -608,17 +628,6 @@ case STREET:
         return null;
     }
 
-    //TODO: delete
-    private void createComputerPlayers(Game game) {
-        int computerPlayers = game.getGameDetails().getComputerPlayers();
-        
-        for(int i = 0 ; i < computerPlayers ; i++){
-            engine.Player.PlayerDetails pd = new engine.Player.PlayerDetails("computer" + i, false,BigInteger.valueOf(game.getGameDetails().getInitialSumOfMoney()));
-            Player newPlayer = new Player(pd);
-            game.getGameDetails().getPlayers().add(newPlayer);
-        }
-    }
-
     private int getCountOfHumans(Game.GameDetails gameDetails) {
         int count = 0;
         for(Player player : gameDetails.getPlayers())
@@ -630,6 +639,10 @@ case STREET:
 
     private boolean isAffordableBet(Player player, int betMoney) {
         return player.getPlayerDetails().getMoney().intValue() >= betMoney;
+    }
+
+    private boolean allowedFinishBetting(Player player, Game game) {
+        return game.getGameDetails().getMinWages() <= player.getPlayerDetails().getBets().size();
     }
     
     private class RemovePlayer extends TimerTask{
