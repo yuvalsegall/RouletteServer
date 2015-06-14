@@ -35,7 +35,7 @@ public class Player implements Comparable<Player> {
 
     public static class PlayerDetails {
 
-        private final int playerID;
+        private int playerID;
         private String name;
         private Boolean isHuman;
         private BigInteger money;
@@ -68,6 +68,11 @@ public class Player implements Comparable<Player> {
             return playerAction;
         }
 
+        public void setPlayerID(int playerID) {
+            this.playerID = playerID;
+        }
+
+        
         public void setPlayerAction(PlayerAction playerAction) {
             this.playerAction = playerAction;
         }
