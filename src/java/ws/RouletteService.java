@@ -423,12 +423,11 @@ public class RouletteService {
         wsEvent.setWinningNumber(event.getWinningNumber());
         System.out.println("winning number: " + wsEvent.getWinningNumber());
         System.out.println("}");
-        return wsEvent;
         
+        return wsEvent;   
     }
 
     private EventType convertEventTypeToWs(engine.Event.EventType eventType) {
-        //TODO: fix if Liron adds "Game winner"
         switch(eventType){
             case GAME_START:
                 return EventType.GAME_START;
