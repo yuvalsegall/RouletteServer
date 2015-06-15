@@ -50,7 +50,7 @@ public class RouletteService {
     //TODO: server on Amazon?
     private final List<engine.Game> games = new ArrayList<>();
     private final Map<Integer, PlayerTimer> timers = new HashMap<>();
-    private static final long MAX_SECONDS_FOR_ROUND = 60;
+    private static final long MAX_SECONDS_FOR_ROUND = 600;
     public static final String GAME_NOT_FOUND = "Game not found";
     public static final String GAME_EXCISTES = "Game name already taken";
     public static final String PLAYER_EXISTS = "Player name in game taken";
@@ -404,11 +404,11 @@ public class RouletteService {
         Event wsEvent = new Event();
         System.out.println("print event:{");
         
+        wsEvent.setAmount(event.getAmount());
         if(event.getBetType() != null){
             wsEvent.setBetType(convertBetTypeToWs(event.getBetType()));
             System.out.println("betType: " + wsEvent.getBetType());
-            wsEvent.setAmount(event.getAmount());
-        System.out.println("amount: " + wsEvent.getAmount());
+            System.out.println("amount: " + wsEvent.getAmount());
         }
         wsEvent.setId(event.getEventID());
         System.out.println("eventId: " + wsEvent.getId());
@@ -687,6 +687,7 @@ case STREET:
                     BigInteger moneyBefore = player.getPlayerDetails().getMoney();
                     player.getPlayerDetails().setMoney(player.getPlayerDetails().getMoney().add(bet.winningSum(game.getTable().getCurrentBallPosition(), game.getTable().getCells().length)));
                     int earned = player.getPlayerDetails().getMoney().intValue() - moneyBefore.intValue();
+                    System.out.println("player " + player.getPlayerDetails().getName() + "earned " + earned);
                     if(player.getPlayerDetails().getIsHuman())
                         game.getEvents().add(new engine.Event(player.getPlayerDetails().getName(), engine.Event.EventType.RESULT_SCORE, game, null, timers.get(player.getPlayerDetails().getPlayerID()).getTimeOutCount(), null, earned));
                     else{
